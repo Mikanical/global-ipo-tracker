@@ -167,8 +167,8 @@
       <p class="sub">Upcoming listings across eleven global exchanges &middot; every figure sourced, every contact tiered by confidence</p>
     </div>
     <div class="asof">
-      DATA AS OF <b id="asof">,</b><br>
-      <span id="covcount">,</span>
+      DATA AS OF <b id="asof">&nbsp;</b><br>
+      <span id="covcount">&nbsp;</span>
     </div>
   </div>
 </header>
@@ -176,10 +176,10 @@
 <div class="wrap">
 
   <div class="stats">
-    <div class="stat"><div class="k">Pipeline entries</div><div class="v" id="s1">,</div><div class="n" id="s1n">shown of total tracked</div></div>
-    <div class="stat"><div class="k">Exchanges covered</div><div class="v" id="s2">,</div><div class="n">of 11 target exchanges</div></div>
-    <div class="stat"><div class="k">Named issuers</div><div class="v" id="s3">,</div><div class="n">excludes unnamed pipeline entries</div></div>
-    <div class="stat"><div class="k">Disclosed valuation</div><div class="v" id="s4">,</div><div class="n">USD, where a figure is public</div></div>
+    <div class="stat"><div class="k">Pipeline entries</div><div class="v" id="s1">&nbsp;</div><div class="n" id="s1n">shown of total tracked</div></div>
+    <div class="stat"><div class="k">Exchanges covered</div><div class="v" id="s2">&nbsp;</div><div class="n">of 11 target exchanges</div></div>
+    <div class="stat"><div class="k">Named issuers</div><div class="v" id="s3">&nbsp;</div><div class="n">excludes unnamed pipeline entries</div></div>
+    <div class="stat"><div class="k">Disclosed valuation</div><div class="v" id="s4">&nbsp;</div><div class="n">USD, where a figure is public</div></div>
   </div>
 
   <div class="controls">
@@ -307,7 +307,7 @@
     clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove("show"); }, 1700);
   }
   function fmtUsd(m){
-    if(m == null) return ",";
+    if(m == null) return "N/A";
     if(m >= 1000) return "$" + (m/1000).toFixed(m >= 10000 ? 0 : 1) + "bn";
     return "$" + m + "m";
   }
@@ -421,7 +421,7 @@
 
     var srcs = (r.sources||[]).map(function(s){
       return '<li>→ <a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.label) + '</a></li>';
-    }).join("") || '<li class="na">,</li>';
+    }).join("") || '<li class="na">None recorded</li>';
 
     return '<div class="dwrap">' +
       '<div class="dblock">' +
@@ -494,7 +494,7 @@
     $("s1n").textContent = "shown of " + IPO_DATA.length + " tracked";
     $("s2").textContent = Object.keys(rows.reduce(function(a,r){ a[r.exchange]=1; return a; }, {})).length;
     $("s3").textContent = named.length;
-    $("s4").textContent = sum ? fmtUsd(sum) : ",";
+    $("s4").textContent = sum ? fmtUsd(sum) : "N/A";
     $("bmn").textContent = "(" + marks.size + ")";
 
     /* header arrows */
