@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global IPO Tracker</title>
+<meta name="description" content="Live tracker of upcoming IPOs across eleven global exchanges, with sourced valuations and tiered C-suite contact data.">
+<style>
+  :root{
+    --bg:#f6f7f9;
+    --panel:#ffffff;
+    --ink:#12161c;
+    --ink-2:#4a5563;
+    --ink-3:#78828f;
+    --line:#e2e6ec;
+    --line-2:#eef1f5;
+    --accent:#1c4ed8;
+    --accent-soft:#eef2ff;
+    --green:#0f7b4f;
+    --green-soft:#e6f4ed;
+    --amber:#8a5a00;
+    --amber-soft:#fdf3e0;
+    --grey:#6b7280;
+    --grey-soft:#f1f3f6;
+    --radius:8px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1480px;margin:0 auto;padding:0 24px 64px}
+
+  /* ---------- header ---------- */
+  header{background:var(--panel);border-bottom:1px solid var(--line);margin-bottom:20px}
+  .head-in{max-width:1480px;margin:0 auto;padding:22px 24px 20px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  h1{margin:0;font-size:21px;font-weight:650;letter-spacing:-.2px}
+  .sub{margin:5px 0 0;color:var(--ink-3);font-size:12.5px}
+  .asof{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);text-align:right}
+  .asof b{color:var(--ink-2);font-weight:600}
+
+  /* ---------- stat strip ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.55px;color:var(--ink-3);font-weight:600}
+  .stat .v{font-size:22px;font-weight:650;margin-top:3px;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+  .stat .n{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+
+  /* ---------- controls ---------- */
+  .controls{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:13px 15px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3);font-weight:600}
+  input[type=search],select{
+    font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;color:var(--ink);min-width:150px;height:34px}
+  input[type=search]{min-width:290px}
+  input[type=search]:focus,select:focus{outline:2px solid var(--accent-soft);outline-offset:0;border-color:var(--accent)}
+  .spacer{flex:1}
+  button{font:inherit;font-size:12.5px;font-weight:550;padding:7px 12px;height:34px;
+    border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:6px;cursor:pointer}
+  button:hover{background:var(--grey-soft);color:var(--ink)}
+  button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.on:hover{background:#1740b8;color:#fff}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{background:#1740b8;color:#fff}
+
+  /* ---------- table ---------- */
+  .tablecard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .scroller{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1180px}
+  thead th{
+    position:sticky;top:0;z-index:2;background:#fbfcfd;border-bottom:1px solid var(--line);
+    text-align:left;padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.55px;
+    color:var(--ink-3);font-weight:650;white-space:nowrap;user-select:none}
+  thead th.sortable{cursor:pointer}
+  thead th.sortable:hover{color:var(--ink);background:#f4f6f9}
+  thead th .arrow{opacity:.35;margin-left:4px;font-size:9px}
+  thead th.active{color:var(--accent)}
+  thead th.active .arrow{opacity:1}
+  tbody td{border-bottom:1px solid var(--line-2);padding:11px 12px;vertical-align:top}
+  tbody tr.row:hover{background:#fafbfd}
+  tbody tr.row{cursor:pointer}
+  .co{font-weight:600;font-size:13.5px;letter-spacing:-.1px}
+  .co-sub{color:var(--ink-3);font-size:11.5px;margin-top:2px}
+  .desc{color:var(--ink-2);font-size:12.5px;max-width:330px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .val{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .date{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .na{color:var(--ink-3);font-style:italic;font-size:12px}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .pill.exch{background:var(--accent-soft);color:var(--accent);font-family:var(--mono);font-size:10.5px;letter-spacing:.3px}
+  .pill.sector{background:var(--grey-soft);color:var(--ink-2)}
+  .pill.st-Listed{background:var(--green-soft);color:var(--green)}
+  .pill.st-Announced{background:var(--accent-soft);color:var(--accent)}
+  .pill.st-Regulator-approved{background:var(--green-soft);color:var(--green)}
+  .pill.st-Rumoured{background:var(--amber-soft);color:var(--amber)}
+  .pill.st-Postponed{background:#fdeaea;color:#9b2226}
+  .pill.st-Pipeline{background:var(--grey-soft);color:var(--grey)}
+
+  /* contact cells */
+  .person{font-size:12.5px;font-weight:550}
+  .mailrow{display:flex;align-items:center;gap:5px;margin-top:3px}
+  .mail{font-family:var(--mono);font-size:11px;color:var(--ink-2);word-break:break-all}
+  .copy{border:none;background:none;padding:2px 4px;height:auto;cursor:pointer;color:var(--ink-3);
+    font-size:11px;border-radius:4px;line-height:1}
+  .copy:hover{background:var(--accent-soft);color:var(--accent)}
+  .tier{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .tier.verified{background:var(--green)}
+  .tier.inferred{background:#d9a400}
+  .tier.none{background:#c6ccd4}
+
+  .star{border:none;background:none;cursor:pointer;font-size:15px;line-height:1;padding:2px;color:#ccd2da;height:auto}
+  .star:hover{color:#e0a800;background:none}
+  .star.on{color:#e8a600}
+
+  /* expanded detail */
+  tr.detail td{background:#fbfcfd;border-bottom:1px solid var(--line);padding:0}
+  .dwrap{padding:16px 18px;display:grid;grid-template-columns:1.55fr 1fr;gap:22px}
+  .dblock h4{margin:0 0 7px;font-size:10.5px;text-transform:uppercase;letter-spacing:.55px;color:var(--ink-3);font-weight:650}
+  .dblock p{margin:0 0 12px;font-size:13px;color:var(--ink-2);line-height:1.6}
+  .kv{display:grid;grid-template-columns:118px 1fr;gap:4px 12px;font-size:12.5px;margin-bottom:12px}
+  .kv dt{color:var(--ink-3)}
+  .kv dd{margin:0;color:var(--ink-2)}
+  .note{font-size:12px;color:var(--ink-2);background:#fff;border:1px solid var(--line);
+    border-left:3px solid #d9a400;border-radius:5px;padding:9px 11px;line-height:1.55}
+  .note.verified{border-left-color:var(--green)}
+  .note.none{border-left-color:#c6ccd4}
+  .srcs{list-style:none;margin:0;padding:0}
+  .srcs li{margin-bottom:5px;font-size:12px}
+  .srcs a{color:var(--accent);text-decoration:none}
+  .srcs a:hover{text-decoration:underline}
+  .contact-line{display:flex;align-items:center;gap:6px;font-size:12.5px;margin-bottom:6px;flex-wrap:wrap}
+
+  .empty{padding:52px 20px;text-align:center;color:var(--ink-3)}
+  .empty b{display:block;color:var(--ink-2);font-size:15px;margin-bottom:5px}
+
+  .legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+    padding:11px 15px;border-top:1px solid var(--line);background:#fbfcfd;font-size:11.5px;color:var(--ink-3)}
+  .legend span{display:flex;align-items:center;gap:5px}
+
+  footer{margin-top:22px;color:var(--ink-3);font-size:12px;line-height:1.65}
+  footer b{color:var(--ink-2)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);
+    background:var(--ink);color:#fff;padding:9px 16px;border-radius:7px;font-size:13px;
+    opacity:0;transition:.22s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:900px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .dwrap{grid-template-columns:1fr}
+    input[type=search]{min-width:100%}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div>
+      <h1>Global IPO Tracker</h1>
+      <p class="sub">Upcoming listings across eleven global exchanges &middot; every figure sourced, every contact tiered by confidence</p>
+    </div>
+    <div class="asof">
+      DATA AS OF <b id="asof">,</b><br>
+      <span id="covcount">,</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="stats">
+    <div class="stat"><div class="k">Pipeline entries</div><div class="v" id="s1">,</div><div class="n" id="s1n">shown of total tracked</div></div>
+    <div class="stat"><div class="k">Exchanges covered</div><div class="v" id="s2">,</div><div class="n">of 11 target exchanges</div></div>
+    <div class="stat"><div class="k">Named issuers</div><div class="v" id="s3">,</div><div class="n">excludes unnamed pipeline entries</div></div>
+    <div class="stat"><div class="k">Disclosed valuation</div><div class="v" id="s4">,</div><div class="n">USD, where a figure is public</div></div>
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="q">Search</label>
+      <input type="search" id="q" placeholder="Company, sector, country or keyword…" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="fx">Exchange</label>
+      <select id="fx"><option value="">All exchanges</option></select>
+    </div>
+    <div class="field">
+      <label for="fs">Sector</label>
+      <select id="fs"><option value="">All sectors</option></select>
+    </div>
+    <div class="field">
+      <label for="ft">Status</label>
+      <select id="ft"><option value="">All statuses</option></select>
+    </div>
+    <div class="spacer"></div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="bm" title="Show only bookmarked companies">☆ Saved <span id="bmn">(0)</span></button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="clear">Reset</button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="csv" class="primary">↓ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="tablecard">
+    <div class="scroller">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th style="width:34px"></th>
+            <th class="sortable" data-k="company">Company <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="exchange">Exchange <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="date">Expected listing <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="sector">Sector <span class="arrow">▲</span></th>
+            <th>Business description</th>
+            <th class="sortable" data-k="valuation">Expected valuation <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="status">Status <span class="arrow">▲</span></th>
+            <th>CEO / CEO email</th>
+            <th>CFO / CFO email</th>
+          </tr>
+        </thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><i class="tier verified"></i> <b>Verified</b>: address published by the company</span>
+      <span><i class="tier inferred"></i> <b>Inferred</b>: built from a known email pattern, unconfirmed</span>
+      <span><i class="tier none"></i> <b>N/A</b>: no public basis</span>
+      <span style="margin-left:auto">Click any row for full detail and sources</span>
+    </div>
+  </div>
+
+  <footer>
+    <b>Methodology.</b> Rows are compiled from exchange calendars and filings, regulator approvals (Saudi CMA), company disclosure and financial press reporting; each row carries its own source links and verification date, visible on expansion.
+    Executive email addresses are almost never published, so none is presented as fact: addresses are marked <b>verified</b> only where the company publishes them, <b>inferred</b> where a confirmed domain pattern was applied to a named executive, and <b>N/A</b> otherwise. Inferred addresses are outreach hypotheses, not confirmed contacts.
+    Where an exchange has a live pipeline but no named issuer, the exchange is retained as an explicit unnamed entry rather than dropped, because an empty exchange is itself information.
+    Valuations are shown in their reported currency; the USD column used for sorting is an indicative normalisation only.
+    <br><br>Built by Michael Del Vecchio &middot; Investment Analyst case study.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================================
+   Global IPO Tracker: dataset
+   ----------------------------------------------------------------------------
+   Every row is compiled from public sources: exchange filings and calendars,
+   regulator approvals (Saudi CMA), company press releases, and financial press
+   reporting. Each record carries its own `sources` array and `verified` date so
+   any figure on the dashboard can be traced back to where it came from.
+
+   CONTACT DATA METHODOLOGY
+   ------------------------
+   Executive email addresses are almost never published. Rather than invent
+   them, every address on this dashboard carries an explicit confidence tier:
+
+     "verified": the address is published by the company itself (an investor
+                  relations or corporate mailbox). Traceable via `sources`.
+     "inferred": the company's email pattern is known (confirmed from a
+                  published address at the same domain, or from the domain's
+                  documented convention) and the executive's address is
+                  constructed from it. Shown with the pattern that produced it.
+                  NOT a confirmed working address.
+     "none":     no public basis for an address. Displayed as N/A.
+
+   An analyst using this list should treat "inferred" as a starting hypothesis
+   for outreach, not as a verified contact.
+
+   `valuationUsdM` is an approximate USD normalisation used only to make the
+   valuation column sortable across currencies. FX used (Sept 2026, indicative):
+   EUR 1.16, GBP 1.34, SAR 0.267, BRL 0.185, MYR 0.237.
+   ========================================================================== */
+
+const IPO_DATA = [
+
+  /* ===================== TADAWUL (Saudi Exchange) ======================== */
+  {
+    company: "Tabby",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "FinTech",
+    status: "Announced",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Buy-now-pay-later platform operating across Saudi Arabia and the UAE with more than 15 million registered users. Redomiciled to Saudi Arabia ahead of a planned Tadawul listing; raised a $160m Series E at a $4.5bn valuation.",
+    valuationDisplay: "$4.5bn",
+    valuationUsdM: 4500,
+    raiseDisplay: "N/A",
+    ceo: "Hosam Arab",
+    ceoEmail: "hosam.arab@tabby.ai",
+    ceoEmailTier: "inferred",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: "first.last@tabby.ai",
+    patternNote: "Domain confirmed (tabby.ai). Pattern assumed from regional fintech convention, treat as unverified.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" },
+      { label: "Zawya, Tabby plans Tadawul listing", url: "https://www.zawya.com/en/markets/equities/bnpl-app-tabby-plans-ipo-saudi-tadawul-listing-mu2owg22" }
+    ]
+  },
+  {
+    company: "Tamara",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "FinTech",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Saudi Arabia's first BNPL unicorn, offering split-payment and consumer credit products across the GCC. Secured a $2.4bn debt facility backed by Goldman Sachs to fund receivables growth ahead of listing.",
+    valuationDisplay: "$1.5–2.0bn",
+    valuationUsdM: 1750,
+    raiseDisplay: "$400–600m",
+    ceo: "Abdulmajeed Alsukhan",
+    ceoEmail: "abdulmajeed.alsukhan@tamara.co",
+    ceoEmailTier: "inferred",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: "first.last@tamara.co",
+    patternNote: "Domain confirmed (tamara.co). Pattern unverified.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Invest Riyadh, Tadawul IPO pipeline", url: "https://investriyadh.ai/intelligence/tadawul-ipo-boom/" },
+      { label: "FinTech Futures, Tamara $2.4bn facility", url: "https://www.fintechfutures.com/bnpl-payments/tamara-secures-2-4bn-facility" }
+    ]
+  },
+  {
+    company: "ROSHN Group",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Real Estate",
+    status: "Announced",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "PIF-owned multi-asset real estate developer building more than 400,000 homes across 10+ Saudi cities. One of the Vision 2030 giga-developers and a flagship candidate in the PIF privatisation programme.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Group CEO role in transition through 2026, no confirmed incumbent, so no name or address is asserted.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" },
+      { label: "AGBI, PIF active in Saudi IPOs", url: "https://www.agbi.com/analysis/markets/2026/02/pif-to-be-active-in-saudi-ipos-this-year-analysts-say/" }
+    ]
+  },
+  {
+    company: "Saudi Global Ports",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Transport & Logistics",
+    status: "Announced",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Container terminal operator running the King Abdulaziz Port at Dammam. Joint venture between a PIF subsidiary and Singapore's PSA International; one of eight assets PIF has earmarked for IPO or secondary sale.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No public executive disclosure ahead of prospectus.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "AGBI, PIF active in Saudi IPOs", url: "https://www.agbi.com/analysis/markets/2026/02/pif-to-be-active-in-saudi-ipos-this-year-analysts-say/" }
+    ]
+  },
+  {
+    company: "National Water Company",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Utilities",
+    status: "Announced",
+    listingDate: "2026-Q4",
+    datePrecision: "quarter",
+    description: "State-owned water and wastewater utility serving the Kingdom's major urban clusters, being prepared for partial privatisation under the Vision 2030 asset programme.",
+    valuationDisplay: "$4.0–5.0bn",
+    valuationUsdM: 4500,
+    raiseDisplay: "$1.0–1.5bn",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "State-owned issuer; executive contacts not published pre-prospectus.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Invest Riyadh, Tadawul IPO pipeline", url: "https://investriyadh.ai/intelligence/tadawul-ipo-boom/" }
+    ]
+  },
+  {
+    company: "Saudi Entertainment Ventures (SEVEN)",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Consumer & Leisure",
+    status: "Announced",
+    listingDate: "2026-Q3",
+    datePrecision: "quarter",
+    description: "PIF-owned developer and operator of entertainment destinations across Saudi cities, building a national network of cinema, retail and leisure complexes.",
+    valuationDisplay: "$2.0–3.0bn",
+    valuationUsdM: 2500,
+    raiseDisplay: "$500–800m",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No public executive disclosure ahead of prospectus.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Invest Riyadh, Tadawul IPO pipeline", url: "https://investriyadh.ai/intelligence/tadawul-ipo-boom/" }
+    ]
+  },
+  {
+    company: "Alat (semiconductor JV)",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "AI & Semiconductors",
+    status: "Rumoured",
+    listingDate: "2026-Q3",
+    datePrecision: "quarter",
+    description: "PIF-backed industrial technology company building semiconductor, advanced electronics and smart-device manufacturing capacity in the Kingdom through international joint ventures.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Early-stage listing speculation; no filing.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Invest Riyadh, Tadawul IPO pipeline", url: "https://investriyadh.ai/intelligence/tadawul-ipo-boom/" }
+    ]
+  },
+  {
+    company: "ArcelorMittal Jubail",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Metals & Mining",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Seamless steel tube manufacturer in Jubail with 600,000 tonnes of annual capacity, serving regional oil and gas customers. Joint venture with ArcelorMittal.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "JV entity; executive contacts not separately published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" }
+    ]
+  },
+  {
+    company: "Panda Retail Company",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Consumer Staples",
+    status: "Announced",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Saudi Arabia's largest grocery chain with more than 200 hypermarkets and supermarkets. Carve-out from listed parent Savola Group.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Contact route runs through listed parent Savola Group's investor relations function.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" }
+    ]
+  },
+  {
+    company: "noon",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "E-Commerce",
+    status: "Rumoured",
+    listingDate: "2027",
+    datePrecision: "year",
+    description: "Regional e-commerce and quick-commerce platform backed by PIF and Mohamed Alabbar, operating across Saudi Arabia, the UAE and Egypt. A dual Tadawul / ADX listing has been discussed.",
+    valuationDisplay: "~$10bn",
+    valuationUsdM: 10000,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No confirmed executive disclosure for the listing entity.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" }
+    ]
+  },
+  {
+    company: "Sela",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Consumer & Leisure",
+    status: "Announced",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Events, ticketing and experience company founded in 1997 and acquired by PIF. Delivers major Saudi entertainment and sporting events; named by analysts as one of eight PIF assets earmarked for market.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No public executive disclosure ahead of prospectus.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "AGBI, PIF active in Saudi IPOs", url: "https://www.agbi.com/analysis/markets/2026/02/pif-to-be-active-in-saudi-ipos-this-year-analysts-say/" }
+    ]
+  },
+  {
+    company: "MGC Contracting",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Industrials",
+    status: "Regulator-approved",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Contracting and capital-goods group founded in 1977, offering 30% of capital. CMA approval granted with a stated offering window.",
+    valuationDisplay: "SAR 12–15bn",
+    valuationUsdM: 3600,
+    raiseDisplay: "30% of capital",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Executive detail sits in the Arabic-language prospectus, not in English disclosure.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" }
+    ]
+  },
+  {
+    company: "Aldyar Alarabiya",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Real Estate",
+    status: "Regulator-approved",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Jeddah-based property developer with a SAR 15bn portfolio. CMA-approved offering of 97.5m shares, representing 30% of capital.",
+    valuationDisplay: "SAR 15bn portfolio",
+    valuationUsdM: 4000,
+    raiseDisplay: "97.5m shares (30%)",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Executive detail sits in the Arabic-language prospectus.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" }
+    ]
+  },
+  {
+    company: "Alandalus Education",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Education",
+    status: "Regulator-approved",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Private K-12 education operator running 10 campuses with more than 18,000 students. CMA-approved offering of 30% of capital.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "30% of capital",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Executive detail sits in the Arabic-language prospectus.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" }
+    ]
+  },
+  {
+    company: "Alkhorayef Petroleum",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Energy",
+    status: "Announced",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Oilfield services business manufacturing and servicing electric submersible pumps for regional upstream operators. PIF holds a 25% stake.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No public executive disclosure ahead of prospectus.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "decoded.finance Saudi IPO calendar", url: "https://decoded.finance/ipo-calendar/" }
+    ]
+  },
+  {
+    company: "Saudia Airlines",
+    exchange: "TADAWUL",
+    country: "Saudi Arabia",
+    sector: "Aviation",
+    status: "Rumoured",
+    listingDate: "2027",
+    datePrecision: "year",
+    description: "National flag carrier undergoing comprehensive restructuring and fleet modernisation ahead of a possible partial privatisation.",
+    valuationDisplay: "$10–15bn",
+    valuationUsdM: 12500,
+    raiseDisplay: "$2–3bn",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "State-owned issuer; no listing-entity disclosure yet.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Invest Riyadh, Tadawul IPO pipeline", url: "https://investriyadh.ai/intelligence/tadawul-ipo-boom/" }
+    ]
+  },
+
+  /* ============================ LSE (London) ============================= */
+  {
+    company: "Monzo Bank",
+    exchange: "LSE",
+    country: "United Kingdom",
+    sector: "FinTech",
+    status: "Announced",
+    listingDate: "2027",
+    datePrecision: "year",
+    description: "UK digital challenger bank with over 12 million customers. Exited the US to concentrate on Europe ahead of listing; Morgan Stanley engaged to advise on a float. A board rift over IPO timing led to a CEO change in early 2026.",
+    valuationDisplay: "~£6bn",
+    valuationUsdM: 8040,
+    raiseDisplay: "N/A",
+    ceo: "Diana Layfield",
+    ceoEmail: "diana.layfield@monzo.com",
+    ceoEmailTier: "inferred",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: "first.last@monzo.com",
+    patternNote: "Domain confirmed (monzo.com). Pattern assumed from UK corporate convention, unverified.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "City AM, Monzo names new chief", url: "https://www.cityam.com/monzo-names-new-chief-as-london-becomes-top-ipo-choice/" },
+      { label: "TNW, Monzo quits US ahead of London IPO", url: "https://thenextweb.com/news/monzo-us-exit-europe-ipo" }
+    ]
+  },
+  {
+    company: "Visma",
+    exchange: "LSE",
+    country: "Norway / United Kingdom",
+    sector: "Software",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Nordic business software and payroll group backed by Hg Capital, which selected London over Amsterdam for what would be one of the largest European technology listings in years.",
+    valuationDisplay: "~£16.5bn",
+    valuationUsdM: 22110,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Sponsor-controlled process; no listing-entity contacts published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Legal Cheek, UK IPOs in 2026", url: "https://www.legalcheek.com/lc-journal-posts/from-gymshark-to-monzo-uk-ipos-in-2026/" }
+    ]
+  },
+  {
+    company: "RAC",
+    exchange: "LSE",
+    country: "United Kingdom",
+    sector: "Consumer Services",
+    status: "Rumoured",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "UK roadside assistance and motoring services group owned by a consortium including CVC and Silver Lake, long cited as a candidate to return to the public market.",
+    valuationDisplay: "~£5bn",
+    valuationUsdM: 6700,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Sponsor-controlled process; no listing-entity contacts published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Legal Cheek, UK IPOs in 2026", url: "https://www.legalcheek.com/lc-journal-posts/from-gymshark-to-monzo-uk-ipos-in-2026/" }
+    ]
+  },
+  {
+    company: "Gymshark",
+    exchange: "LSE",
+    country: "United Kingdom",
+    sector: "Consumer Discretionary",
+    status: "Rumoured",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Direct-to-consumer activewear brand founded in 2012, built on influencer-led marketing and online distribution. Founder-controlled, with General Atlantic holding a minority stake.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "Ben Francis",
+    ceoEmail: "ben.francis@gymshark.com",
+    ceoEmailTier: "inferred",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: "first.last@gymshark.com",
+    patternNote: "Domain confirmed (gymshark.com). Pattern assumed from UK corporate convention, unverified.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Legal Cheek, UK IPOs in 2026", url: "https://www.legalcheek.com/lc-journal-posts/from-gymshark-to-monzo-uk-ipos-in-2026/" },
+      { label: "Gymshark, Ben Francis returns as CEO", url: "https://fashionunited.uk/news/business/gymshark-co-founder-ben-francis-returns-to-ceo-role/2021070256366" }
+    ]
+  },
+  {
+    company: "loveholidays",
+    exchange: "LSE",
+    country: "United Kingdom",
+    sector: "Travel & Leisure",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Online travel agency selling dynamically packaged flight-plus-hotel holidays, owned by Livingbridge. Listing was delayed from early 2026 amid market volatility.",
+    valuationDisplay: "~£1bn",
+    valuationUsdM: 1340,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Sponsor-controlled process; no listing-entity contacts published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Legal Cheek, UK IPOs in 2026", url: "https://www.legalcheek.com/lc-journal-posts/from-gymshark-to-monzo-uk-ipos-in-2026/" }
+    ]
+  },
+  {
+    company: "Starling Bank",
+    exchange: "LSE",
+    country: "United Kingdom",
+    sector: "FinTech",
+    status: "Rumoured",
+    listingDate: "2027",
+    datePrecision: "year",
+    description: "UK digital bank with a profitable retail and SME franchise, plus the Engine banking-software business it licenses to other banks.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No confirmed listing process; contacts not asserted.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Legal Cheek, UK IPOs in 2026", url: "https://www.legalcheek.com/lc-journal-posts/from-gymshark-to-monzo-uk-ipos-in-2026/" }
+    ]
+  },
+  {
+    company: "SumUp",
+    exchange: "LSE",
+    country: "United Kingdom / Germany",
+    sector: "FinTech",
+    status: "Rumoured",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Merchant payments company providing card readers and business accounts to small merchants across Europe and Latin America. Cited alongside Monzo as a test of London's ability to retain fintech listings.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No confirmed listing process; contacts not asserted.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "City AM, London fintech IPO test", url: "https://www.cityam.com/monzo-names-new-chief-as-london-becomes-top-ipo-choice/" }
+    ]
+  },
+  {
+    company: "Waterstones",
+    exchange: "LSE",
+    country: "United Kingdom",
+    sector: "Consumer Discretionary",
+    status: "Rumoured",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "UK bookstore chain owned by Elliott Advisors, which also controls Barnes & Noble. A listing would test appetite for physical retail on the London market.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Sponsor-controlled process; no listing-entity contacts published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Legal Cheek, UK IPOs in 2026", url: "https://www.legalcheek.com/lc-journal-posts/from-gymshark-to-monzo-uk-ipos-in-2026/" }
+    ]
+  },
+  {
+    company: "Boots",
+    exchange: "LSE",
+    country: "United Kingdom",
+    sector: "Consumer Staples",
+    status: "Rumoured",
+    listingDate: "2027",
+    datePrecision: "year",
+    description: "UK pharmacy and health-and-beauty retailer owned by Walgreens Boots Alliance. A London listing has been revisited repeatedly since the abandoned 2024 sale process.",
+    valuationDisplay: "~£7bn",
+    valuationUsdM: 9380,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Parent-controlled process; no listing-entity contacts published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Legal Cheek, UK IPOs in 2026", url: "https://www.legalcheek.com/lc-journal-posts/from-gymshark-to-monzo-uk-ipos-in-2026/" }
+    ]
+  },
+
+  /* ====================== XETRA (Deutsche Börse) ========================= */
+  {
+    company: "TK Elevator",
+    exchange: "XETRA",
+    country: "Germany",
+    sector: "Industrials",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "One of the world's four largest elevator and escalator manufacturers, spun out of Thyssenkrupp in 2020. Owned by Advent, Cinven and Thyssenkrupp; would be among the largest German listings in years.",
+    valuationDisplay: "€23bn",
+    valuationUsdM: 26680,
+    raiseDisplay: "N/A",
+    ceo: "Uday Yadav",
+    ceoEmail: "uday.yadav@tkelevator.com",
+    ceoEmailTier: "inferred",
+    cfo: "Philipp Mueller",
+    cfoEmail: "philipp.mueller@tkelevator.com",
+    cfoEmailTier: "inferred",
+    irEmail: "christian.h.schulte@tkelevator.com",
+    irName: "Christian Schulte, Head of Investor Relations",
+    irEmailTier: "verified",
+    emailPattern: "first.last@tkelevator.com",
+    patternNote: "Pattern CONFIRMED from the company's own published IR contacts (nicole.getta@tkelevator.com, christian.h.schulte@tkelevator.com). Executive addresses constructed from that confirmed pattern.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "TK Elevator Investor Relations (published contacts)", url: "https://investors.tkelevator.com" },
+      { label: "Börsen-Zeitung, EY expects up to ten German IPOs in 2026", url: "https://www.boersen-zeitung.de/english/ey-expects-up-to-ten-german-ipos-in-2026" },
+      { label: "TK Elevator, CFO Philipp Mueller", url: "https://www.tkelevator.com/global-en/about-us/leadership/philipp-mueller/" }
+    ]
+  },
+  {
+    company: "KNDS",
+    exchange: "XETRA",
+    country: "Germany / France",
+    sector: "Defence",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Franco-German land-defence group formed from Krauss-Maffei Wegmann and Nexter, producing the Leopard 2 tank and artillery systems. A listing would ride the European rearmament cycle.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "State-shareholder structure; no listing-entity contacts published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Börsen-Zeitung, EY expects up to ten German IPOs in 2026", url: "https://www.boersen-zeitung.de/english/ey-expects-up-to-ten-german-ipos-in-2026" }
+    ]
+  },
+  {
+    company: "mobile.de",
+    exchange: "XETRA",
+    country: "Germany",
+    sector: "Internet & Classifieds",
+    status: "Rumoured",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Germany's largest online vehicle marketplace, acquired from Adevinta by Blackstone and Permira. A classic sponsor-exit candidate for the Frankfurt market.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Sponsor-controlled process; no listing-entity contacts published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Börsen-Zeitung, EY expects up to ten German IPOs in 2026", url: "https://www.boersen-zeitung.de/english/ey-expects-up-to-ten-german-ipos-in-2026" }
+    ]
+  },
+  {
+    company: "Brainlab",
+    exchange: "XETRA",
+    country: "Germany",
+    sector: "Biotech & MedTech",
+    status: "Postponed",
+    listingDate: "N/A",
+    datePrecision: "unknown",
+    description: "Medical technology company making software-guided surgical navigation systems for brain, tumour and spinal procedures, and radiotherapy guidance. Describes itself as 'the Google Maps for surgery'. Generated €470m revenue at a 16.5% EBITDA margin; the 2025 Prime Standard listing was pulled and has not been relaunched.",
+    valuationDisplay: "~€3bn (2025 attempt)",
+    valuationUsdM: 3480,
+    raiseDisplay: "€600m (2025 attempt)",
+    ceo: "Rainer Birkenbach",
+    ceoEmail: "rainer.birkenbach@brainlab.com",
+    ceoEmailTier: "inferred",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: "first.last@brainlab.com",
+    patternNote: "Domain confirmed (brainlab.com). Pattern assumed from German corporate convention, unverified.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Börsen-Zeitung, Brainlab fires the starting gun for its IPO", url: "https://www.boersen-zeitung.de/english/brainlab-gives-the-green-light-for-its-ipo" }
+    ]
+  },
+
+  /* ======================== DFM (Dubai) ================================== */
+  {
+    company: "Dubai Investments Park",
+    exchange: "DFM",
+    country: "United Arab Emirates",
+    sector: "Real Estate",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Master-developer and operator of a 3,200-hectare mixed-use industrial, commercial and residential park in Dubai. Carve-out from listed parent Dubai Investments PJSC, which has confirmed it is still pursuing the listing while not fixing final timing.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Contact route runs through listed parent Dubai Investments PJSC investor relations.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "AGBI, Dubai Investments pushes ahead with DIP listing", url: "https://www.agbi.com/markets/2026/05/dubai-investments-pushes-ahead-with-dip-listing/" },
+      { label: "The National, Middle East IPOs to bounce back in 2026", url: "https://www.thenationalnews.com/business/markets/2026/01/02/middle-east-ipos-to-bounce-back-in-2026-after-slump/" }
+    ]
+  },
+  {
+    company: "Dubizzle Group",
+    exchange: "DFM",
+    country: "United Arab Emirates",
+    sector: "Internet & Classifieds",
+    status: "Announced",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "MENA's largest classifieds group, operating dubizzle, Bayut and Property Finder-adjacent portals across the UAE, Egypt and Pakistan. Postponed a 2025 listing and is tipped to return in 2026.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No listing-entity executive disclosure published.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "The National, Middle East IPOs to bounce back in 2026", url: "https://www.thenationalnews.com/business/markets/2026/01/02/middle-east-ipos-to-bounce-back-in-2026-after-slump/" }
+    ]
+  },
+  {
+    company: "Binghatti Holding",
+    exchange: "DFM",
+    country: "United Arab Emirates",
+    sector: "Real Estate",
+    status: "Rumoured",
+    listingDate: "2026",
+    datePrecision: "year",
+    description: "Dubai luxury property developer known for branded residential towers, expanding into hospitality. Named among UAE candidates for the 2026 window.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No confirmed listing process; contacts not asserted.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "The National, Middle East IPOs to bounce back in 2026", url: "https://www.thenationalnews.com/business/markets/2026/01/02/middle-east-ipos-to-bounce-back-in-2026-after-slump/" }
+    ]
+  },
+
+  /* ========================= B3 (Brazil) ================================= */
+  {
+    company: "Compass Gás e Energia",
+    exchange: "B3",
+    country: "Brazil",
+    sector: "Energy",
+    status: "Listed",
+    listingDate: "2026-05-11",
+    datePrecision: "day",
+    description: "Brazil's leading natural gas distributor, comprising Comgás (São Paulo state distribution), gas marketing and midstream infrastructure. Listed on B3's Novo Mercado under ticker PASS3 in an entirely secondary offering by parent Cosan. Ended Brazil's five-year IPO drought.",
+    valuationDisplay: "~R$20bn",
+    valuationUsdM: 3700,
+    raiseDisplay: "R$2.5–3.2bn",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Post-listing contact runs through the Cosan group investor relations function.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Rio Times, Compass IPO ends Brazil's drought", url: "https://www.riotimesonline.com/compass-cosan-ipo-brazil-drought-b3-2026/" }
+    ]
+  },
+  {
+    company: "B3 pipeline (issuer not yet named)",
+    exchange: "B3",
+    country: "Brazil",
+    sector: "Multiple",
+    status: "Pipeline signalled",
+    listingDate: "N/A",
+    datePrecision: "unknown",
+    description: "Following the Compass listing, bankers report a reopening Brazilian pipeline of candidates that had been shelved since 2021. No individual issuer has filed publicly as of the verification date. This row is retained deliberately: an empty exchange is itself information for a coverage list.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No issuer named, so no contacts exist to record.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Rio Times, Compass debuts on B3", url: "https://www.riotimesonline.com/compass-debuts-on-b3-monday-as-brazils-ipo-drought-ends/" }
+    ]
+  },
+
+  /* ====================== KLSE (Bursa Malaysia) ========================== */
+  {
+    company: "SkyeChip Berhad",
+    exchange: "KLSE",
+    country: "Malaysia",
+    sector: "AI & Semiconductors",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Malaysia's first homegrown integrated-circuit design house, developing custom silicon and IP for AI and data-centre applications. Main Market listing priced at RM0.80 per share.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "~RM352m",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Executive detail sits in the Bursa prospectus, not in English press disclosure.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "IPO Malaysia 2026, Bursa listings", url: "https://calculatormalaysia.com/investment/ipo-malaysia-2026/" }
+    ]
+  },
+  {
+    company: "KK Mart (KK Super Mart)",
+    exchange: "KLSE",
+    country: "Malaysia",
+    sector: "Consumer Staples",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "National convenience-store chain operating several hundred outlets across Malaysia. Pricing and listing date not yet confirmed.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Prospectus not yet public.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "IPO Malaysia 2026, Bursa listings", url: "https://calculatormalaysia.com/investment/ipo-malaysia-2026/" }
+    ]
+  },
+  {
+    company: "MTT Shipping",
+    exchange: "KLSE",
+    country: "Malaysia",
+    sector: "Transport & Logistics",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Intra-Asia container shipping and logistics operator. One of the larger names in the Bursa pipeline; pricing and date to be confirmed.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Prospectus not yet public.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "IPO Malaysia 2026, Bursa listings", url: "https://calculatormalaysia.com/investment/ipo-malaysia-2026/" }
+    ]
+  },
+  {
+    company: "EI Power",
+    exchange: "KLSE",
+    country: "Malaysia",
+    sector: "Energy",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Energy systems and power infrastructure contractor. Pricing and listing date to be confirmed.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Prospectus not yet public.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "IPO Malaysia 2026, Bursa listings", url: "https://calculatormalaysia.com/investment/ipo-malaysia-2026/" }
+    ]
+  },
+  {
+    company: "Big Caring Group",
+    exchange: "KLSE",
+    country: "Malaysia",
+    sector: "Healthcare",
+    status: "Announced",
+    listingDate: "2026-H2",
+    datePrecision: "half",
+    description: "Community pharmacy and healthcare retail chain. Pricing and listing date to be confirmed.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Prospectus not yet public.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "IPO Malaysia 2026, Bursa listings", url: "https://calculatormalaysia.com/investment/ipo-malaysia-2026/" }
+    ]
+  },
+  {
+    company: "Sunway Healthcare Holdings",
+    exchange: "KLSE",
+    country: "Malaysia",
+    sector: "Healthcare",
+    status: "Listed",
+    listingDate: "2026-03-18",
+    datePrecision: "day",
+    description: "Private hospital group operating Malaysia's Sunway Medical network. The largest Bursa IPO of 2026 at RM2.86bn raised; priced at RM1.45 and closed its first day up 28% on 5.57x institutional oversubscription.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "RM2.86bn",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Now listed; contact runs through the company's investor relations function.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "IPO Malaysia 2026, Bursa listings", url: "https://calculatormalaysia.com/investment/ipo-malaysia-2026/" }
+    ]
+  },
+
+  /* ======================== JSE (Johannesburg) =========================== */
+  {
+    company: "Dangote Refinery",
+    exchange: "JSE",
+    country: "Nigeria / South Africa",
+    sector: "Energy",
+    status: "Announced",
+    listingDate: "2027",
+    datePrecision: "year",
+    description: "Operator of the 650,000 barrel-per-day Lekki refinery outside Lagos, Africa's largest. Plans a primary listing on the Nigerian Exchange first, with a stated intent to follow with a JSE secondary listing. Would be the continent's largest public offering.",
+    valuationDisplay: "~$5bn",
+    valuationUsdM: 5000,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "Listing entity and executive slate not yet disclosed.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "CNBC Africa, JSE courts Dangote Refinery listing", url: "https://www.cnbcafrica.com/2026/south-africas-jse-courts-dangote-refinery-listing" }
+    ]
+  },
+  {
+    company: "JSE pipeline (issuers not yet named)",
+    exchange: "JSE",
+    country: "South Africa",
+    sector: "Multiple",
+    status: "Pipeline signalled",
+    listingDate: "N/A",
+    datePrecision: "unknown",
+    description: "JSE CEO Valdene Reddy has described a robust pipeline spanning mining, fintech, property and construction, REITs and infrastructure-linked instruments, alongside simplified listing rules introduced to cut issuer costs. No individual issuers have been named publicly.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No issuer named, so no contacts exist to record.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "CNBC Africa, JSE courts Dangote Refinery listing", url: "https://www.cnbcafrica.com/2026/south-africas-jse-courts-dangote-refinery-listing" },
+      { label: "JSE simplified listing requirements", url: "https://dabafinance.com/en/news/jse-simplified-listing-requirements-capital-markets" }
+    ]
+  },
+
+  /* ===================== SGX / WSE / SET / TWSE ========================== */
+  {
+    company: "SGX pipeline: Nasdaq dual-listing fast track",
+    exchange: "SGX",
+    country: "Singapore",
+    sector: "Multiple",
+    status: "Pipeline signalled",
+    listingDate: "N/A",
+    datePrecision: "unknown",
+    description: "SGX opened a fast-track Nasdaq dual-listing route from mid-2026 and reported a growing IPO pipeline alongside record half-year profit, but the S$2bn market-cap threshold may limit uptake. Chinese issuers are also exploring Singapore listings. No individual issuer has been publicly named for the window.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No issuer named, so no contacts exist to record.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "Malay Mail, SGX Nasdaq fast-track dual listing", url: "https://www.malaymail.com/news/singapore/2026/01/09/singapores-nasdaq-fasttrack-draws-interest-but-high-s2b-threshold-may-curb-uptake/204737" },
+      { label: "SGX record half-year profit, growing IPO pipeline", url: "https://in.marketscreener.com/news/singapore-exchange-logs-record-half-year-profit-highlights-growing-ipo-pipeline-ce7e5adbd98df624" }
+    ]
+  },
+  {
+    company: "WSE pipeline (defence issuer not yet named)",
+    exchange: "WSE",
+    country: "Poland",
+    sector: "Defence",
+    status: "Pipeline signalled",
+    listingDate: "2026-Q4",
+    datePrecision: "quarter",
+    description: "The Warsaw Stock Exchange expects a clear revival in IPO activity in 2026, including the possibility of a significant defence-sector listing toward the end of the year, and increased activity from Central and Eastern European issuers. The specific issuer has not been disclosed.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No issuer named, so no contacts exist to record.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "WFE Focus, Warsaw Stock Exchange 2026 agenda", url: "https://focus.world-exchanges.org/articles/warsaw-stock-exchange" }
+    ]
+  },
+  {
+    company: "SET pipeline: 3 approved, 3 submitted",
+    exchange: "SET",
+    country: "Thailand",
+    sector: "Multiple",
+    status: "Pipeline signalled",
+    listingDate: "N/A",
+    datePrecision: "unknown",
+    description: "The Stock Exchange of Thailand's upcoming-IPO register shows three approved applications (two common stock, one REIT) and three submitted, with no filings yet at effective status. Issuer names are not published at the approved stage. The exchange is separately courting technology and AI listings and working to win back Thai companies that listed abroad.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No issuer named at this filing stage, so no contacts exist to record.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "SET, Upcoming IPO register", url: "https://www.set.or.th/en/listing/ipo/upcoming-ipo/set" },
+      { label: "Thailand and Singapore exchanges seek tech listings", url: "https://kr-asia.com/thailand-singapore-exchanges-seek-tech-listings-as-ai-booms" }
+    ]
+  },
+  {
+    company: "TWSE pipeline (AI issuers not yet named)",
+    exchange: "TWSE",
+    country: "Taiwan",
+    sector: "AI & Semiconductors",
+    status: "Pipeline signalled",
+    listingDate: "N/A",
+    datePrecision: "unknown",
+    description: "TWSE Chairman Lin has said AI-related companies will account for more than 40% of Taiwan's IPO listings in 2026, with the exchange positioning itself around the AI and semiconductor supply chain and its Taiwan Innovation Board. Individual issuers in the pipeline have not been publicly named.",
+    valuationDisplay: "N/A",
+    valuationUsdM: null,
+    raiseDisplay: "N/A",
+    ceo: "N/A",
+    ceoEmail: null,
+    ceoEmailTier: "none",
+    cfo: "N/A",
+    cfoEmail: null,
+    cfoEmailTier: "none",
+    emailPattern: null,
+    patternNote: "No issuer named, so no contacts exist to record.",
+    verified: "2026-09-02",
+    sources: [
+      { label: "TWSE Chairman Lin, AI IPO share to top 40% in 2026", url: "https://finance.biggo.com/news/UoH1lJ4BmHHDnbgy4VHS" },
+      { label: "TWSE Taiwan Innovation Board", url: "https://www.twse.com.tw/TIB/en/news.html" }
+    ]
+  }
+];
+
+/* Exchange reference metadata: full names and cities for the filter and detail views. */
+const EXCHANGE_META = {
+  LSE:     { name: "London Stock Exchange",        city: "London",       flag: "GB" },
+  WSE:     { name: "Warsaw Stock Exchange (GPW)",  city: "Warsaw",       flag: "PL" },
+  DFM:     { name: "Dubai Financial Market",       city: "Dubai",        flag: "AE" },
+  TADAWUL: { name: "Saudi Exchange (Tadawul)",     city: "Riyadh",       flag: "SA" },
+  JSE:     { name: "Johannesburg Stock Exchange",  city: "Johannesburg", flag: "ZA" },
+  B3:      { name: "B3 (Brasil, Bolsa, Balcão)",     city: "São Paulo",    flag: "BR" },
+  SGX:     { name: "Singapore Exchange",           city: "Singapore",    flag: "SG" },
+  TWSE:    { name: "Taiwan Stock Exchange",        city: "Taipei",       flag: "TW" },
+  SET:     { name: "Stock Exchange of Thailand",   city: "Bangkok",      flag: "TH" },
+  KLSE:    { name: "Bursa Malaysia",               city: "Kuala Lumpur", flag: "MY" },
+  XETRA:   { name: "Deutsche Börse Xetra",         city: "Frankfurt",    flag: "DE" }
+};
+
+const DATA_AS_OF = "2026-09-02";
+
+</script>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- storage (degrades silently if unavailable) ---------- */
+  var KEY = "ipo-tracker-bookmarks";
+  function loadMarks(){
+    try{ return new Set(JSON.parse(localStorage.getItem(KEY) || "[]")); }
+    catch(e){ return new Set(); }
+  }
+  function saveMarks(s){
+    try{ localStorage.setItem(KEY, JSON.stringify(Array.from(s))); }catch(e){}
+  }
+  var marks = loadMarks();
+
+  /* ---------------- helpers ------------------------------------------- */
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){
+    return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function na(v){ return (v==null || v==="" || v==="N/A") ? '<span class="na">N/A</span>' : esc(v); }
+
+  /* Turn "2026", "2026-H2", "2026-Q4", "2026-05-11", "N/A" into a sortable number. */
+  function dateKey(d){
+    if(!d || d==="N/A") return 9e15;                    // unknown sorts last
+    var m;
+    if((m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d))) return Date.UTC(+m[1], +m[2]-1, +m[3]);
+    if((m = /^(\d{4})-Q([1-4])$/.exec(d)))        return Date.UTC(+m[1], (+m[2]-1)*3 + 1, 15);
+    if((m = /^(\d{4})-H([12])$/.exec(d)))         return Date.UTC(+m[1], (+m[2]-1)*6 + 2, 15);
+    if((m = /^(\d{4})$/.exec(d)))                 return Date.UTC(+m[1], 6, 1);
+    return 9e15;
+  }
+  function dateLabel(d){
+    if(!d || d==="N/A") return '<span class="na">Not disclosed</span>';
+    var m;
+    if((m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d))){
+      var mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1];
+      return esc(m[3] + " " + mo + " " + m[1]);
+    }
+    if((m = /^(\d{4})-(Q[1-4]|H[12])$/.exec(d))) return esc(m[2] + " " + m[1]);
+    return esc(d);
+  }
+  function statusClass(s){
+    if(/^Pipeline/.test(s)) return "st-Pipeline";
+    return "st-" + String(s).replace(/[^A-Za-z-]/g,"");
+  }
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove("show"); }, 1700);
+  }
+  function fmtUsd(m){
+    if(m == null) return ",";
+    if(m >= 1000) return "$" + (m/1000).toFixed(m >= 10000 ? 0 : 1) + "bn";
+    return "$" + m + "m";
+  }
+
+  /* ---------------- state --------------------------------------------- */
+  var state = { q:"", ex:"", sec:"", st:"", onlyMarks:false, sort:"date", dir:1, open:null };
+
+  /* ---------------- build filter options ------------------------------ */
+  function fill(sel, values){
+    values.sort().forEach(function(v){
+      var o = document.createElement("option"); o.value = v; o.textContent = v; sel.appendChild(o);
+    });
+  }
+  var exs = {}, secs = {}, sts = {};
+  IPO_DATA.forEach(function(r){ exs[r.exchange]=1; secs[r.sector]=1; sts[r.status]=1; });
+  var fxSel = $("fx");
+  Object.keys(exs).sort().forEach(function(v){
+    var meta = EXCHANGE_META[v], o = document.createElement("option");
+    o.value = v; o.textContent = v + (meta ? " · " + meta.name : "");
+    fxSel.appendChild(o);
+  });
+  fill($("fs"), Object.keys(secs));
+  fill($("ft"), Object.keys(sts));
+
+  /* ---------------- filter + sort ------------------------------------- */
+  function filtered(){
+    var q = state.q.trim().toLowerCase();
+    var rows = IPO_DATA.filter(function(r){
+      if(state.ex  && r.exchange !== state.ex)  return false;
+      if(state.sec && r.sector   !== state.sec) return false;
+      if(state.st  && r.status   !== state.st)  return false;
+      if(state.onlyMarks && !marks.has(r.company)) return false;
+      if(!q) return true;
+      var hay = [r.company, r.sector, r.country, r.exchange, r.description,
+                 r.ceo, r.cfo, r.status].join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+    var k = state.sort, d = state.dir;
+
+    /* When searching, surface company-name hits above description-only hits. */
+    function relevance(r){
+      if(!q) return 0;
+      var n = r.company.toLowerCase();
+      if(n.indexOf(q) === 0) return -2;   // starts with the query
+      if(n.indexOf(q) !== -1) return -1;  // name contains the query
+      return 0;                            // matched on description or another field
+    }
+    /* This is an UPCOMING-IPO tracker: completed deals are useful comps but never lead. */
+    function completed(r){ return r.status === "Listed" ? 1 : 0; }
+
+    rows.sort(function(a,b){
+      var ra = relevance(a), rb = relevance(b);
+      if(ra !== rb) return ra - rb;
+      if(k === "date"){
+        var ca = completed(a), cb = completed(b);
+        if(ca !== cb) return ca - cb;
+      }
+      var x, y;
+      if(k === "date")            { x = dateKey(a.listingDate);  y = dateKey(b.listingDate); }
+      else if(k === "valuation")  { x = a.valuationUsdM==null ? -1 : a.valuationUsdM;
+                                    y = b.valuationUsdM==null ? -1 : b.valuationUsdM; }
+      else                        { x = String(a[k]||"").toLowerCase(); y = String(b[k]||"").toLowerCase(); }
+      if(x < y) return -1*d;
+      if(x > y) return  1*d;
+      return a.company.localeCompare(b.company);
+    });
+    return rows;
+  }
+
+  /* ---------------- contact cell -------------------------------------- */
+  function contactCell(name, email, tier){
+    if(!name || name === "N/A"){
+      return '<span class="tier none" style="vertical-align:middle"></span> <span class="na">Not disclosed</span>';
+    }
+    var out = '<div class="person">' + esc(name) + '</div>';
+    if(email){
+      out += '<div class="mailrow">' +
+               '<i class="tier ' + esc(tier) + '" title="' + esc(tier) + '"></i>' +
+               '<span class="mail">' + esc(email) + '</span>' +
+               '<button class="copy" data-mail="' + esc(email) + '" title="Copy address">⧉</button>' +
+             '</div>';
+    } else {
+      out += '<div class="mailrow"><i class="tier none"></i><span class="na">no public address</span></div>';
+    }
+    return out;
+  }
+
+  /* ---------------- detail panel -------------------------------------- */
+  function detailHtml(r){
+    var meta = EXCHANGE_META[r.exchange] || {};
+    var noteClass = r.irEmailTier === "verified" ? "verified"
+                  : (r.ceoEmailTier === "inferred" || r.cfoEmailTier === "inferred") ? "" : "none";
+
+    var contacts = "";
+    if(r.irEmail){
+      contacts += '<div class="contact-line"><i class="tier verified"></i><b>' + esc(r.irName || "Investor Relations") + '</b>' +
+                  '<span class="mail">' + esc(r.irEmail) + '</span>' +
+                  '<button class="copy" data-mail="' + esc(r.irEmail) + '">⧉</button></div>';
+    }
+    if(r.ceo && r.ceo !== "N/A"){
+      contacts += '<div class="contact-line"><i class="tier ' + esc(r.ceoEmail ? r.ceoEmailTier : "none") + '"></i><b>' + esc(r.ceo) + '</b> <span style="color:var(--ink-3)">CEO</span>' +
+                  (r.ceoEmail ? '<span class="mail">' + esc(r.ceoEmail) + '</span><button class="copy" data-mail="' + esc(r.ceoEmail) + '">⧉</button>' : ' <span class="na">no public address</span>') +
+                  '</div>';
+    }
+    if(r.cfo && r.cfo !== "N/A"){
+      contacts += '<div class="contact-line"><i class="tier ' + esc(r.cfoEmail ? r.cfoEmailTier : "none") + '"></i><b>' + esc(r.cfo) + '</b> <span style="color:var(--ink-3)">CFO</span>' +
+                  (r.cfoEmail ? '<span class="mail">' + esc(r.cfoEmail) + '</span><button class="copy" data-mail="' + esc(r.cfoEmail) + '">⧉</button>' : ' <span class="na">no public address</span>') +
+                  '</div>';
+    }
+    if(!contacts) contacts = '<div class="na">No executives publicly attached to the listing entity.</div>';
+
+    var srcs = (r.sources||[]).map(function(s){
+      return '<li>→ <a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.label) + '</a></li>';
+    }).join("") || '<li class="na">,</li>';
+
+    return '<div class="dwrap">' +
+      '<div class="dblock">' +
+        '<h4>Business description</h4>' +
+        '<p>' + esc(r.description) + '</p>' +
+        '<h4>Contacts</h4>' +
+        contacts +
+        (r.patternNote ? '<div class="note ' + noteClass + '" style="margin-top:10px"><b>Contact basis:</b> ' + esc(r.patternNote) + (r.emailPattern ? ' <br><b>Pattern applied:</b> <span class="mail">' + esc(r.emailPattern) + '</span>' : '') + '</div>' : '') +
+      '</div>' +
+      '<div class="dblock">' +
+        '<h4>Deal detail</h4>' +
+        '<dl class="kv">' +
+          '<dt>Exchange</dt><dd>' + esc(meta.name || r.exchange) + (meta.city ? ', ' + esc(meta.city) : '') + '</dd>' +
+          '<dt>Country</dt><dd>' + na(r.country) + '</dd>' +
+          '<dt>Sector</dt><dd>' + na(r.sector) + '</dd>' +
+          '<dt>Status</dt><dd>' + na(r.status) + '</dd>' +
+          '<dt>Expected listing</dt><dd>' + dateLabel(r.listingDate) + '</dd>' +
+          '<dt>Valuation</dt><dd>' + na(r.valuationDisplay) + '</dd>' +
+          '<dt>Raise size</dt><dd>' + na(r.raiseDisplay) + '</dd>' +
+          '<dt>USD (indicative)</dt><dd>' + fmtUsd(r.valuationUsdM) + '</dd>' +
+          '<dt>Last verified</dt><dd>' + esc(r.verified) + '</dd>' +
+        '</dl>' +
+        '<h4>Sources</h4>' +
+        '<ul class="srcs">' + srcs + '</ul>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ---------------- render -------------------------------------------- */
+  function render(){
+    var rows = filtered(), tb = $("tb");
+    tb.innerHTML = "";
+
+    if(!rows.length){
+      tb.innerHTML = '<tr><td colspan="10"><div class="empty"><b>No listings match these filters</b>' +
+                     'Try clearing the search box or widening the exchange and sector filters.</div></td></tr>';
+    }
+
+    rows.forEach(function(r){
+      var tr = document.createElement("tr");
+      tr.className = "row";
+      tr.setAttribute("data-co", r.company);
+      var isMarked = marks.has(r.company);
+      tr.innerHTML =
+        '<td><button class="star' + (isMarked ? " on" : "") + '" data-star="' + esc(r.company) + '" ' +
+            'title="' + (isMarked ? "Remove bookmark" : "Bookmark this company") + '">' + (isMarked ? "★" : "☆") + '</button></td>' +
+        '<td><div class="co">' + esc(r.company) + '</div><div class="co-sub">' + esc(r.country) + '</div></td>' +
+        '<td><span class="pill exch">' + esc(r.exchange) + '</span></td>' +
+        '<td class="date">' + dateLabel(r.listingDate) + '</td>' +
+        '<td><span class="pill sector">' + esc(r.sector) + '</span></td>' +
+        '<td><div class="desc">' + esc(r.description) + '</div></td>' +
+        '<td class="val">' + na(r.valuationDisplay) + '</td>' +
+        '<td><span class="pill ' + statusClass(r.status) + '">' + esc(r.status) + '</span></td>' +
+        '<td>' + contactCell(r.ceo, r.ceoEmail, r.ceoEmailTier) + '</td>' +
+        '<td>' + contactCell(r.cfo, r.cfoEmail, r.cfoEmailTier) + '</td>';
+      tb.appendChild(tr);
+
+      if(state.open === r.company){
+        var dr = document.createElement("tr");
+        dr.className = "detail";
+        dr.innerHTML = '<td colspan="10">' + detailHtml(r) + '</td>';
+        tb.appendChild(dr);
+      }
+    });
+
+    /* stats */
+    var named = rows.filter(function(r){ return !/^Pipeline/.test(r.status); });
+    var sum = rows.reduce(function(a,r){ return a + (r.valuationUsdM || 0); }, 0);
+    $("s1").textContent = rows.length;
+    $("s1n").textContent = "shown of " + IPO_DATA.length + " tracked";
+    $("s2").textContent = Object.keys(rows.reduce(function(a,r){ a[r.exchange]=1; return a; }, {})).length;
+    $("s3").textContent = named.length;
+    $("s4").textContent = sum ? fmtUsd(sum) : ",";
+    $("bmn").textContent = "(" + marks.size + ")";
+
+    /* header arrows */
+    Array.prototype.forEach.call(document.querySelectorAll("thead th.sortable"), function(th){
+      var active = th.dataset.k === state.sort;
+      th.classList.toggle("active", active);
+      th.querySelector(".arrow").textContent = active ? (state.dir === 1 ? "▲" : "▼") : "▲";
+    });
+  }
+
+  /* ---------------- events -------------------------------------------- */
+  $("q").addEventListener("input",  function(e){ state.q  = e.target.value; state.open = null; render(); });
+  $("fx").addEventListener("change",function(e){ state.ex = e.target.value; state.open = null; render(); });
+  $("fs").addEventListener("change",function(e){ state.sec= e.target.value; state.open = null; render(); });
+  $("ft").addEventListener("change",function(e){ state.st = e.target.value; state.open = null; render(); });
+
+  $("bm").addEventListener("click", function(){
+    state.onlyMarks = !state.onlyMarks;
+    this.classList.toggle("on", state.onlyMarks);
+    state.open = null; render();
+  });
+
+  $("clear").addEventListener("click", function(){
+    state = { q:"", ex:"", sec:"", st:"", onlyMarks:false, sort:"date", dir:1, open:null };
+    $("q").value = ""; $("fx").value = ""; $("fs").value = ""; $("ft").value = "";
+    $("bm").classList.remove("on");
+    render();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("thead th.sortable"), function(th){
+    th.addEventListener("click", function(){
+      var k = th.dataset.k;
+      if(state.sort === k){ state.dir = -state.dir; } else { state.sort = k; state.dir = 1; }
+      state.open = null; render();
+    });
+  });
+
+  /* delegated: bookmark, copy, expand */
+  $("tb").addEventListener("click", function(e){
+    var starBtn = e.target.closest("[data-star]");
+    if(starBtn){
+      e.stopPropagation();
+      var co = starBtn.dataset.star;
+      if(marks.has(co)){ marks.delete(co); toast("Removed " + co + " from saved"); }
+      else { marks.add(co); toast("Saved " + co); }
+      saveMarks(marks); render(); return;
+    }
+    var copyBtn = e.target.closest("[data-mail]");
+    if(copyBtn){
+      e.stopPropagation();
+      var mail = copyBtn.dataset.mail;
+      var done = function(){ toast("Copied " + mail); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(mail).then(done, function(){ fallbackCopy(mail); done(); });
+      } else { fallbackCopy(mail); done(); }
+      return;
+    }
+    var row = e.target.closest("tr.row");
+    if(row){
+      var name = row.getAttribute("data-co");
+      state.open = (state.open === name) ? null : name;
+      render();
+    }
+  });
+
+  function fallbackCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(err){}
+    document.body.removeChild(ta);
+  }
+
+  /* ---------------- CSV export ---------------------------------------- */
+  $("csv").addEventListener("click", function(){
+    var cols = ["Company","Exchange","Exchange Name","Country","Expected Listing Date","Status","Sector",
+                "Business Description","Expected Valuation","Raise Size","Valuation USD (m, indicative)",
+                "CEO","CEO Email","CEO Email Confidence",
+                "CFO","CFO Email","CFO Email Confidence",
+                "IR Email","Email Pattern","Contact Basis","Last Verified","Sources"];
+    function q(v){
+      if(v == null || v === "") v = "N/A";
+      return '"' + String(v).replace(/"/g,'""').replace(/\r?\n/g," ") + '"';
+    }
+    var rows = filtered().map(function(r){
+      var meta = EXCHANGE_META[r.exchange] || {};
+      return [r.company, r.exchange, meta.name, r.country, r.listingDate, r.status, r.sector,
+              r.description, r.valuationDisplay, r.raiseDisplay, r.valuationUsdM,
+              r.ceo, r.ceoEmail, r.ceoEmail ? r.ceoEmailTier : "none",
+              r.cfo, r.cfoEmail, r.cfoEmail ? r.cfoEmailTier : "none",
+              r.irEmail, r.emailPattern, r.patternNote, r.verified,
+              (r.sources||[]).map(function(s){ return s.url; }).join(" | ")
+             ].map(q).join(",");
+    });
+    var csv = "﻿" + cols.map(q).join(",") + "\r\n" + rows.join("\r\n");
+    var blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    var url  = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "global-ipo-tracker-" + DATA_AS_OF + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    toast("Exported " + rows.length + " rows to CSV");
+  });
+
+  /* ---------------- boot ---------------------------------------------- */
+  $("asof").textContent = DATA_AS_OF;
+  $("covcount").textContent = IPO_DATA.length + " entries across " +
+    Object.keys(IPO_DATA.reduce(function(a,r){ a[r.exchange]=1; return a; }, {})).length + " exchanges";
+  render();
+})();
+</script>
+</body>
+</html>

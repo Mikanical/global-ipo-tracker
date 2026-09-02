@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global IPO Tracker</title>
+<meta name="description" content="Live tracker of upcoming IPOs across eleven global exchanges, with sourced valuations and tiered C-suite contact data.">
+<style>
+  :root{
+    --bg:#f6f7f9;
+    --panel:#ffffff;
+    --ink:#12161c;
+    --ink-2:#4a5563;
+    --ink-3:#78828f;
+    --line:#e2e6ec;
+    --line-2:#eef1f5;
+    --accent:#1c4ed8;
+    --accent-soft:#eef2ff;
+    --green:#0f7b4f;
+    --green-soft:#e6f4ed;
+    --amber:#8a5a00;
+    --amber-soft:#fdf3e0;
+    --grey:#6b7280;
+    --grey-soft:#f1f3f6;
+    --radius:8px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1480px;margin:0 auto;padding:0 24px 64px}
+
+  /* ---------- header ---------- */
+  header{background:var(--panel);border-bottom:1px solid var(--line);margin-bottom:20px}
+  .head-in{max-width:1480px;margin:0 auto;padding:22px 24px 20px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  h1{margin:0;font-size:21px;font-weight:650;letter-spacing:-.2px}
+  .sub{margin:5px 0 0;color:var(--ink-3);font-size:12.5px}
+  .asof{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);text-align:right}
+  .asof b{color:var(--ink-2);font-weight:600}
+
+  /* ---------- stat strip ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.55px;color:var(--ink-3);font-weight:600}
+  .stat .v{font-size:22px;font-weight:650;margin-top:3px;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+  .stat .n{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+
+  /* ---------- controls ---------- */
+  .controls{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:13px 15px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3);font-weight:600}
+  input[type=search],select{
+    font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;color:var(--ink);min-width:150px;height:34px}
+  input[type=search]{min-width:290px}
+  input[type=search]:focus,select:focus{outline:2px solid var(--accent-soft);outline-offset:0;border-color:var(--accent)}
+  .spacer{flex:1}
+  button{font:inherit;font-size:12.5px;font-weight:550;padding:7px 12px;height:34px;
+    border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:6px;cursor:pointer}
+  button:hover{background:var(--grey-soft);color:var(--ink)}
+  button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.on:hover{background:#1740b8;color:#fff}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{background:#1740b8;color:#fff}
+
+  /* ---------- table ---------- */
+  .tablecard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .scroller{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1180px}
+  thead th{
+    position:sticky;top:0;z-index:2;background:#fbfcfd;border-bottom:1px solid var(--line);
+    text-align:left;padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.55px;
+    color:var(--ink-3);font-weight:650;white-space:nowrap;user-select:none}
+  thead th.sortable{cursor:pointer}
+  thead th.sortable:hover{color:var(--ink);background:#f4f6f9}
+  thead th .arrow{opacity:.35;margin-left:4px;font-size:9px}
+  thead th.active{color:var(--accent)}
+  thead th.active .arrow{opacity:1}
+  tbody td{border-bottom:1px solid var(--line-2);padding:11px 12px;vertical-align:top}
+  tbody tr.row:hover{background:#fafbfd}
+  tbody tr.row{cursor:pointer}
+  .co{font-weight:600;font-size:13.5px;letter-spacing:-.1px}
+  .co-sub{color:var(--ink-3);font-size:11.5px;margin-top:2px}
+  .desc{color:var(--ink-2);font-size:12.5px;max-width:330px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .val{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .date{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .na{color:var(--ink-3);font-style:italic;font-size:12px}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .pill.exch{background:var(--accent-soft);color:var(--accent);font-family:var(--mono);font-size:10.5px;letter-spacing:.3px}
+  .pill.sector{background:var(--grey-soft);color:var(--ink-2)}
+  .pill.st-Listed{background:var(--green-soft);color:var(--green)}
+  .pill.st-Announced{background:var(--accent-soft);color:var(--accent)}
+  .pill.st-Regulator-approved{background:var(--green-soft);color:var(--green)}
+  .pill.st-Rumoured{background:var(--amber-soft);color:var(--amber)}
+  .pill.st-Postponed{background:#fdeaea;color:#9b2226}
+  .pill.st-Pipeline{background:var(--grey-soft);color:var(--grey)}
+
+  /* contact cells */
+  .person{font-size:12.5px;font-weight:550}
+  .mailrow{display:flex;align-items:center;gap:5px;margin-top:3px}
+  .mail{font-family:var(--mono);font-size:11px;color:var(--ink-2);word-break:break-all}
+  .copy{border:none;background:none;padding:2px 4px;height:auto;cursor:pointer;color:var(--ink-3);
+    font-size:11px;border-radius:4px;line-height:1}
+  .copy:hover{background:var(--accent-soft);color:var(--accent)}
+  .tier{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .tier.verified{background:var(--green)}
+  .tier.inferred{background:#d9a400}
+  .tier.none{background:#c6ccd4}
+
+  .star{border:none;background:none;cursor:pointer;font-size:15px;line-height:1;padding:2px;color:#ccd2da;height:auto}
+  .star:hover{color:#e0a800;background:none}
+  .star.on{color:#e8a600}
+
+  /* expanded detail */
+  tr.detail td{background:#fbfcfd;border-bottom:1px solid var(--line);padding:0}
+  .dwrap{padding:16px 18px;display:grid;grid-template-columns:1.55fr 1fr;gap:22px}
+  .dblock h4{margin:0 0 7px;font-size:10.5px;text-transform:uppercase;letter-spacing:.55px;color:var(--ink-3);font-weight:650}
+  .dblock p{margin:0 0 12px;font-size:13px;color:var(--ink-2);line-height:1.6}
+  .kv{display:grid;grid-template-columns:118px 1fr;gap:4px 12px;font-size:12.5px;margin-bottom:12px}
+  .kv dt{color:var(--ink-3)}
+  .kv dd{margin:0;color:var(--ink-2)}
+  .note{font-size:12px;color:var(--ink-2);background:#fff;border:1px solid var(--line);
+    border-left:3px solid #d9a400;border-radius:5px;padding:9px 11px;line-height:1.55}
+  .note.verified{border-left-color:var(--green)}
+  .note.none{border-left-color:#c6ccd4}
+  .srcs{list-style:none;margin:0;padding:0}
+  .srcs li{margin-bottom:5px;font-size:12px}
+  .srcs a{color:var(--accent);text-decoration:none}
+  .srcs a:hover{text-decoration:underline}
+  .contact-line{display:flex;align-items:center;gap:6px;font-size:12.5px;margin-bottom:6px;flex-wrap:wrap}
+
+  .empty{padding:52px 20px;text-align:center;color:var(--ink-3)}
+  .empty b{display:block;color:var(--ink-2);font-size:15px;margin-bottom:5px}
+
+  .legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+    padding:11px 15px;border-top:1px solid var(--line);background:#fbfcfd;font-size:11.5px;color:var(--ink-3)}
+  .legend span{display:flex;align-items:center;gap:5px}
+
+  footer{margin-top:22px;color:var(--ink-3);font-size:12px;line-height:1.65}
+  footer b{color:var(--ink-2)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);
+    background:var(--ink);color:#fff;padding:9px 16px;border-radius:7px;font-size:13px;
+    opacity:0;transition:.22s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:900px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .dwrap{grid-template-columns:1fr}
+    input[type=search]{min-width:100%}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div>
+      <h1>Global IPO Tracker</h1>
+      <p class="sub">Upcoming listings across eleven global exchanges &middot; every figure sourced, every contact tiered by confidence</p>
+    </div>
+    <div class="asof">
+      DATA AS OF <b id="asof">,</b><br>
+      <span id="covcount">,</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="stats">
+    <div class="stat"><div class="k">Pipeline entries</div><div class="v" id="s1">,</div><div class="n" id="s1n">shown of total tracked</div></div>
+    <div class="stat"><div class="k">Exchanges covered</div><div class="v" id="s2">,</div><div class="n">of 11 target exchanges</div></div>
+    <div class="stat"><div class="k">Named issuers</div><div class="v" id="s3">,</div><div class="n">excludes unnamed pipeline entries</div></div>
+    <div class="stat"><div class="k">Disclosed valuation</div><div class="v" id="s4">,</div><div class="n">USD, where a figure is public</div></div>
+  </div>
+
+  <div class="controls">
+    <div class="field">
+      <label for="q">Search</label>
+      <input type="search" id="q" placeholder="Company, sector, country or keyword…" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="fx">Exchange</label>
+      <select id="fx"><option value="">All exchanges</option></select>
+    </div>
+    <div class="field">
+      <label for="fs">Sector</label>
+      <select id="fs"><option value="">All sectors</option></select>
+    </div>
+    <div class="field">
+      <label for="ft">Status</label>
+      <select id="ft"><option value="">All statuses</option></select>
+    </div>
+    <div class="spacer"></div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="bm" title="Show only bookmarked companies">☆ Saved <span id="bmn">(0)</span></button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="clear">Reset</button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="csv" class="primary">↓ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="tablecard">
+    <div class="scroller">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th style="width:34px"></th>
+            <th class="sortable" data-k="company">Company <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="exchange">Exchange <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="date">Expected listing <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="sector">Sector <span class="arrow">▲</span></th>
+            <th>Business description</th>
+            <th class="sortable" data-k="valuation">Expected valuation <span class="arrow">▲</span></th>
+            <th class="sortable" data-k="status">Status <span class="arrow">▲</span></th>
+            <th>CEO / CEO email</th>
+            <th>CFO / CFO email</th>
+          </tr>
+        </thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><i class="tier verified"></i> <b>Verified</b>: address published by the company</span>
+      <span><i class="tier inferred"></i> <b>Inferred</b>: built from a known email pattern, unconfirmed</span>
+      <span><i class="tier none"></i> <b>N/A</b>: no public basis</span>
+      <span style="margin-left:auto">Click any row for full detail and sources</span>
+    </div>
+  </div>
+
+  <footer>
+    <b>Methodology.</b> Rows are compiled from exchange calendars and filings, regulator approvals (Saudi CMA), company disclosure and financial press reporting; each row carries its own source links and verification date, visible on expansion.
+    Executive email addresses are almost never published, so none is presented as fact: addresses are marked <b>verified</b> only where the company publishes them, <b>inferred</b> where a confirmed domain pattern was applied to a named executive, and <b>N/A</b> otherwise. Inferred addresses are outreach hypotheses, not confirmed contacts.
+    Where an exchange has a live pipeline but no named issuer, the exchange is retained as an explicit unnamed entry rather than dropped, because an empty exchange is itself information.
+    Valuations are shown in their reported currency; the USD column used for sorting is an indicative normalisation only.
+    <br><br>Built by Michael Del Vecchio &middot; Investment Analyst case study.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- storage (degrades silently if unavailable) ---------- */
+  var KEY = "ipo-tracker-bookmarks";
+  function loadMarks(){
+    try{ return new Set(JSON.parse(localStorage.getItem(KEY) || "[]")); }
+    catch(e){ return new Set(); }
+  }
+  function saveMarks(s){
+    try{ localStorage.setItem(KEY, JSON.stringify(Array.from(s))); }catch(e){}
+  }
+  var marks = loadMarks();
+
+  /* ---------------- helpers ------------------------------------------- */
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){
+    return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function na(v){ return (v==null || v==="" || v==="N/A") ? '<span class="na">N/A</span>' : esc(v); }
+
+  /* Turn "2026", "2026-H2", "2026-Q4", "2026-05-11", "N/A" into a sortable number. */
+  function dateKey(d){
+    if(!d || d==="N/A") return 9e15;                    // unknown sorts last
+    var m;
+    if((m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d))) return Date.UTC(+m[1], +m[2]-1, +m[3]);
+    if((m = /^(\d{4})-Q([1-4])$/.exec(d)))        return Date.UTC(+m[1], (+m[2]-1)*3 + 1, 15);
+    if((m = /^(\d{4})-H([12])$/.exec(d)))         return Date.UTC(+m[1], (+m[2]-1)*6 + 2, 15);
+    if((m = /^(\d{4})$/.exec(d)))                 return Date.UTC(+m[1], 6, 1);
+    return 9e15;
+  }
+  function dateLabel(d){
+    if(!d || d==="N/A") return '<span class="na">Not disclosed</span>';
+    var m;
+    if((m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d))){
+      var mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1];
+      return esc(m[3] + " " + mo + " " + m[1]);
+    }
+    if((m = /^(\d{4})-(Q[1-4]|H[12])$/.exec(d))) return esc(m[2] + " " + m[1]);
+    return esc(d);
+  }
+  function statusClass(s){
+    if(/^Pipeline/.test(s)) return "st-Pipeline";
+    return "st-" + String(s).replace(/[^A-Za-z-]/g,"");
+  }
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove("show"); }, 1700);
+  }
+  function fmtUsd(m){
+    if(m == null) return ",";
+    if(m >= 1000) return "$" + (m/1000).toFixed(m >= 10000 ? 0 : 1) + "bn";
+    return "$" + m + "m";
+  }
+
+  /* ---------------- state --------------------------------------------- */
+  var state = { q:"", ex:"", sec:"", st:"", onlyMarks:false, sort:"date", dir:1, open:null };
+
+  /* ---------------- build filter options ------------------------------ */
+  function fill(sel, values){
+    values.sort().forEach(function(v){
+      var o = document.createElement("option"); o.value = v; o.textContent = v; sel.appendChild(o);
+    });
+  }
+  var exs = {}, secs = {}, sts = {};
+  IPO_DATA.forEach(function(r){ exs[r.exchange]=1; secs[r.sector]=1; sts[r.status]=1; });
+  var fxSel = $("fx");
+  Object.keys(exs).sort().forEach(function(v){
+    var meta = EXCHANGE_META[v], o = document.createElement("option");
+    o.value = v; o.textContent = v + (meta ? " · " + meta.name : "");
+    fxSel.appendChild(o);
+  });
+  fill($("fs"), Object.keys(secs));
+  fill($("ft"), Object.keys(sts));
+
+  /* ---------------- filter + sort ------------------------------------- */
+  function filtered(){
+    var q = state.q.trim().toLowerCase();
+    var rows = IPO_DATA.filter(function(r){
+      if(state.ex  && r.exchange !== state.ex)  return false;
+      if(state.sec && r.sector   !== state.sec) return false;
+      if(state.st  && r.status   !== state.st)  return false;
+      if(state.onlyMarks && !marks.has(r.company)) return false;
+      if(!q) return true;
+      var hay = [r.company, r.sector, r.country, r.exchange, r.description,
+                 r.ceo, r.cfo, r.status].join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+    var k = state.sort, d = state.dir;
+
+    /* When searching, surface company-name hits above description-only hits. */
+    function relevance(r){
+      if(!q) return 0;
+      var n = r.company.toLowerCase();
+      if(n.indexOf(q) === 0) return -2;   // starts with the query
+      if(n.indexOf(q) !== -1) return -1;  // name contains the query
+      return 0;                            // matched on description or another field
+    }
+    /* This is an UPCOMING-IPO tracker: completed deals are useful comps but never lead. */
+    function completed(r){ return r.status === "Listed" ? 1 : 0; }
+
+    rows.sort(function(a,b){
+      var ra = relevance(a), rb = relevance(b);
+      if(ra !== rb) return ra - rb;
+      if(k === "date"){
+        var ca = completed(a), cb = completed(b);
+        if(ca !== cb) return ca - cb;
+      }
+      var x, y;
+      if(k === "date")            { x = dateKey(a.listingDate);  y = dateKey(b.listingDate); }
+      else if(k === "valuation")  { x = a.valuationUsdM==null ? -1 : a.valuationUsdM;
+                                    y = b.valuationUsdM==null ? -1 : b.valuationUsdM; }
+      else                        { x = String(a[k]||"").toLowerCase(); y = String(b[k]||"").toLowerCase(); }
+      if(x < y) return -1*d;
+      if(x > y) return  1*d;
+      return a.company.localeCompare(b.company);
+    });
+    return rows;
+  }
+
+  /* ---------------- contact cell -------------------------------------- */
+  function contactCell(name, email, tier){
+    if(!name || name === "N/A"){
+      return '<span class="tier none" style="vertical-align:middle"></span> <span class="na">Not disclosed</span>';
+    }
+    var out = '<div class="person">' + esc(name) + '</div>';
+    if(email){
+      out += '<div class="mailrow">' +
+               '<i class="tier ' + esc(tier) + '" title="' + esc(tier) + '"></i>' +
+               '<span class="mail">' + esc(email) + '</span>' +
+               '<button class="copy" data-mail="' + esc(email) + '" title="Copy address">⧉</button>' +
+             '</div>';
+    } else {
+      out += '<div class="mailrow"><i class="tier none"></i><span class="na">no public address</span></div>';
+    }
+    return out;
+  }
+
+  /* ---------------- detail panel -------------------------------------- */
+  function detailHtml(r){
+    var meta = EXCHANGE_META[r.exchange] || {};
+    var noteClass = r.irEmailTier === "verified" ? "verified"
+                  : (r.ceoEmailTier === "inferred" || r.cfoEmailTier === "inferred") ? "" : "none";
+
+    var contacts = "";
+    if(r.irEmail){
+      contacts += '<div class="contact-line"><i class="tier verified"></i><b>' + esc(r.irName || "Investor Relations") + '</b>' +
+                  '<span class="mail">' + esc(r.irEmail) + '</span>' +
+                  '<button class="copy" data-mail="' + esc(r.irEmail) + '">⧉</button></div>';
+    }
+    if(r.ceo && r.ceo !== "N/A"){
+      contacts += '<div class="contact-line"><i class="tier ' + esc(r.ceoEmail ? r.ceoEmailTier : "none") + '"></i><b>' + esc(r.ceo) + '</b> <span style="color:var(--ink-3)">CEO</span>' +
+                  (r.ceoEmail ? '<span class="mail">' + esc(r.ceoEmail) + '</span><button class="copy" data-mail="' + esc(r.ceoEmail) + '">⧉</button>' : ' <span class="na">no public address</span>') +
+                  '</div>';
+    }
+    if(r.cfo && r.cfo !== "N/A"){
+      contacts += '<div class="contact-line"><i class="tier ' + esc(r.cfoEmail ? r.cfoEmailTier : "none") + '"></i><b>' + esc(r.cfo) + '</b> <span style="color:var(--ink-3)">CFO</span>' +
+                  (r.cfoEmail ? '<span class="mail">' + esc(r.cfoEmail) + '</span><button class="copy" data-mail="' + esc(r.cfoEmail) + '">⧉</button>' : ' <span class="na">no public address</span>') +
+                  '</div>';
+    }
+    if(!contacts) contacts = '<div class="na">No executives publicly attached to the listing entity.</div>';
+
+    var srcs = (r.sources||[]).map(function(s){
+      return '<li>→ <a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.label) + '</a></li>';
+    }).join("") || '<li class="na">,</li>';
+
+    return '<div class="dwrap">' +
+      '<div class="dblock">' +
+        '<h4>Business description</h4>' +
+        '<p>' + esc(r.description) + '</p>' +
+        '<h4>Contacts</h4>' +
+        contacts +
+        (r.patternNote ? '<div class="note ' + noteClass + '" style="margin-top:10px"><b>Contact basis:</b> ' + esc(r.patternNote) + (r.emailPattern ? ' <br><b>Pattern applied:</b> <span class="mail">' + esc(r.emailPattern) + '</span>' : '') + '</div>' : '') +
+      '</div>' +
+      '<div class="dblock">' +
+        '<h4>Deal detail</h4>' +
+        '<dl class="kv">' +
+          '<dt>Exchange</dt><dd>' + esc(meta.name || r.exchange) + (meta.city ? ', ' + esc(meta.city) : '') + '</dd>' +
+          '<dt>Country</dt><dd>' + na(r.country) + '</dd>' +
+          '<dt>Sector</dt><dd>' + na(r.sector) + '</dd>' +
+          '<dt>Status</dt><dd>' + na(r.status) + '</dd>' +
+          '<dt>Expected listing</dt><dd>' + dateLabel(r.listingDate) + '</dd>' +
+          '<dt>Valuation</dt><dd>' + na(r.valuationDisplay) + '</dd>' +
+          '<dt>Raise size</dt><dd>' + na(r.raiseDisplay) + '</dd>' +
+          '<dt>USD (indicative)</dt><dd>' + fmtUsd(r.valuationUsdM) + '</dd>' +
+          '<dt>Last verified</dt><dd>' + esc(r.verified) + '</dd>' +
+        '</dl>' +
+        '<h4>Sources</h4>' +
+        '<ul class="srcs">' + srcs + '</ul>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ---------------- render -------------------------------------------- */
+  function render(){
+    var rows = filtered(), tb = $("tb");
+    tb.innerHTML = "";
+
+    if(!rows.length){
+      tb.innerHTML = '<tr><td colspan="10"><div class="empty"><b>No listings match these filters</b>' +
+                     'Try clearing the search box or widening the exchange and sector filters.</div></td></tr>';
+    }
+
+    rows.forEach(function(r){
+      var tr = document.createElement("tr");
+      tr.className = "row";
+      tr.setAttribute("data-co", r.company);
+      var isMarked = marks.has(r.company);
+      tr.innerHTML =
+        '<td><button class="star' + (isMarked ? " on" : "") + '" data-star="' + esc(r.company) + '" ' +
+            'title="' + (isMarked ? "Remove bookmark" : "Bookmark this company") + '">' + (isMarked ? "★" : "☆") + '</button></td>' +
+        '<td><div class="co">' + esc(r.company) + '</div><div class="co-sub">' + esc(r.country) + '</div></td>' +
+        '<td><span class="pill exch">' + esc(r.exchange) + '</span></td>' +
+        '<td class="date">' + dateLabel(r.listingDate) + '</td>' +
+        '<td><span class="pill sector">' + esc(r.sector) + '</span></td>' +
+        '<td><div class="desc">' + esc(r.description) + '</div></td>' +
+        '<td class="val">' + na(r.valuationDisplay) + '</td>' +
+        '<td><span class="pill ' + statusClass(r.status) + '">' + esc(r.status) + '</span></td>' +
+        '<td>' + contactCell(r.ceo, r.ceoEmail, r.ceoEmailTier) + '</td>' +
+        '<td>' + contactCell(r.cfo, r.cfoEmail, r.cfoEmailTier) + '</td>';
+      tb.appendChild(tr);
+
+      if(state.open === r.company){
+        var dr = document.createElement("tr");
+        dr.className = "detail";
+        dr.innerHTML = '<td colspan="10">' + detailHtml(r) + '</td>';
+        tb.appendChild(dr);
+      }
+    });
+
+    /* stats */
+    var named = rows.filter(function(r){ return !/^Pipeline/.test(r.status); });
+    var sum = rows.reduce(function(a,r){ return a + (r.valuationUsdM || 0); }, 0);
+    $("s1").textContent = rows.length;
+    $("s1n").textContent = "shown of " + IPO_DATA.length + " tracked";
+    $("s2").textContent = Object.keys(rows.reduce(function(a,r){ a[r.exchange]=1; return a; }, {})).length;
+    $("s3").textContent = named.length;
+    $("s4").textContent = sum ? fmtUsd(sum) : ",";
+    $("bmn").textContent = "(" + marks.size + ")";
+
+    /* header arrows */
+    Array.prototype.forEach.call(document.querySelectorAll("thead th.sortable"), function(th){
+      var active = th.dataset.k === state.sort;
+      th.classList.toggle("active", active);
+      th.querySelector(".arrow").textContent = active ? (state.dir === 1 ? "▲" : "▼") : "▲";
+    });
+  }
+
+  /* ---------------- events -------------------------------------------- */
+  $("q").addEventListener("input",  function(e){ state.q  = e.target.value; state.open = null; render(); });
+  $("fx").addEventListener("change",function(e){ state.ex = e.target.value; state.open = null; render(); });
+  $("fs").addEventListener("change",function(e){ state.sec= e.target.value; state.open = null; render(); });
+  $("ft").addEventListener("change",function(e){ state.st = e.target.value; state.open = null; render(); });
+
+  $("bm").addEventListener("click", function(){
+    state.onlyMarks = !state.onlyMarks;
+    this.classList.toggle("on", state.onlyMarks);
+    state.open = null; render();
+  });
+
+  $("clear").addEventListener("click", function(){
+    state = { q:"", ex:"", sec:"", st:"", onlyMarks:false, sort:"date", dir:1, open:null };
+    $("q").value = ""; $("fx").value = ""; $("fs").value = ""; $("ft").value = "";
+    $("bm").classList.remove("on");
+    render();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("thead th.sortable"), function(th){
+    th.addEventListener("click", function(){
+      var k = th.dataset.k;
+      if(state.sort === k){ state.dir = -state.dir; } else { state.sort = k; state.dir = 1; }
+      state.open = null; render();
+    });
+  });
+
+  /* delegated: bookmark, copy, expand */
+  $("tb").addEventListener("click", function(e){
+    var starBtn = e.target.closest("[data-star]");
+    if(starBtn){
+      e.stopPropagation();
+      var co = starBtn.dataset.star;
+      if(marks.has(co)){ marks.delete(co); toast("Removed " + co + " from saved"); }
+      else { marks.add(co); toast("Saved " + co); }
+      saveMarks(marks); render(); return;
+    }
+    var copyBtn = e.target.closest("[data-mail]");
+    if(copyBtn){
+      e.stopPropagation();
+      var mail = copyBtn.dataset.mail;
+      var done = function(){ toast("Copied " + mail); };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(mail).then(done, function(){ fallbackCopy(mail); done(); });
+      } else { fallbackCopy(mail); done(); }
+      return;
+    }
+    var row = e.target.closest("tr.row");
+    if(row){
+      var name = row.getAttribute("data-co");
+      state.open = (state.open === name) ? null : name;
+      render();
+    }
+  });
+
+  function fallbackCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(err){}
+    document.body.removeChild(ta);
+  }
+
+  /* ---------------- CSV export ---------------------------------------- */
+  $("csv").addEventListener("click", function(){
+    var cols = ["Company","Exchange","Exchange Name","Country","Expected Listing Date","Status","Sector",
+                "Business Description","Expected Valuation","Raise Size","Valuation USD (m, indicative)",
+                "CEO","CEO Email","CEO Email Confidence",
+                "CFO","CFO Email","CFO Email Confidence",
+                "IR Email","Email Pattern","Contact Basis","Last Verified","Sources"];
+    function q(v){
+      if(v == null || v === "") v = "N/A";
+      return '"' + String(v).replace(/"/g,'""').replace(/\r?\n/g," ") + '"';
+    }
+    var rows = filtered().map(function(r){
+      var meta = EXCHANGE_META[r.exchange] || {};
+      return [r.company, r.exchange, meta.name, r.country, r.listingDate, r.status, r.sector,
+              r.description, r.valuationDisplay, r.raiseDisplay, r.valuationUsdM,
+              r.ceo, r.ceoEmail, r.ceoEmail ? r.ceoEmailTier : "none",
+              r.cfo, r.cfoEmail, r.cfoEmail ? r.cfoEmailTier : "none",
+              r.irEmail, r.emailPattern, r.patternNote, r.verified,
+              (r.sources||[]).map(function(s){ return s.url; }).join(" | ")
+             ].map(q).join(",");
+    });
+    var csv = "﻿" + cols.map(q).join(",") + "\r\n" + rows.join("\r\n");
+    var blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    var url  = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "global-ipo-tracker-" + DATA_AS_OF + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    toast("Exported " + rows.length + " rows to CSV");
+  });
+
+  /* ---------------- boot ---------------------------------------------- */
+  $("asof").textContent = DATA_AS_OF;
+  $("covcount").textContent = IPO_DATA.length + " entries across " +
+    Object.keys(IPO_DATA.reduce(function(a,r){ a[r.exchange]=1; return a; }, {})).length + " exchanges";
+  render();
+})();
+</script>
+</body>
+</html>
